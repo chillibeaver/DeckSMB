@@ -22,6 +22,7 @@ class Plugin:
         self.settings = self._load_setting()
         self.wsdd_path = os.path.join(
             decky.DECKY_PLUGIN_DIR, "py_modules", "wsdd.py")
+        self._installing = False
         decky.logger.info("main loaded")
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
@@ -81,6 +82,116 @@ class Plugin:
             "netbios_name": self.settings.get("netbios_name", "steamdeck"),
             "discovery": discovery
         }
+
+    async def install_smb(self) -> dict:
+        if self._installing:
+            return {"success": False, "error": "Installation already in progress"}
+        self._installing = True
+        steps = []
+        try:
+            await decky.emit("install_progress", "Disabling read-only filesystem...")
+            rc, stdout, stderr = await self._run("steamos-readonly disable")
+            decky.logger.info(
+                f"steamos-readonly disable: rc={rc} stdout={stdout} stderr={stderr}")
+            if rc != 0:
+                return {"success": False, "error": f"Failed to disable read-only: {stdout or stderr}"}
+            steps.append("readonly_disabled")
+
+            await decky.emit("install_progress", "Configuring pacman...")
+            await self._run(r"sed -i '/^SigLevel[[:space:]]*=[[:space:]]*Required DatabaseOptional/s/^/#/' /etc/pacman.conf")
+            await self._run(r"sed -i '/^#SigLevel[[:space:]]*=[[:space:]]*Required DatabaseOptional/a\SigLevel = TrustAll' /etc/pacman.conf")
+            await self._run("pacman-key --init")
+            await self._run("pacman-key --populate archlinux")
+
+            # smb install
+            await decky.emit("install_progress", "Installing samba package...")
+            await self._run("rm -f /usr/lib/holo/pacmandb/db.lck /var/lib/pacman/db.lck")
+            _, readonly_out, _ = await self._run("btrfs property get / ro")
+            decky.logger.info(f"btrfs check read only: {readonly_out}")
+            if "ro=true" in readonly_out:
+                await self._run("btrfs property set / ro false")
+                await self._run("mount -o remount,rw /")
+            rc, stdout, stderr = await self._run("pacman -Sy --nonconfirm samba")
+            decky.logger.info(
+                f"pacman install samba: rc={rc} stderr={stderr[:200] if stderr else ''}")
+            if rc != 0:
+                return {"success": False, "error": f"Failed to install samba: {stderr}"}
+            steps.append("samba_installed")
+
+            # default password
+            await decky.emit("install_progress", "Setting defualt password...")
+            process = await asyncio.create_subprocess_exec(
+                "smbpasswd", "-a", "-s", "deck",
+                env=self._clean_env(),
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.communicate(input=b"0000\n0000\n")
+            steps.append("password_set")
+
+            await decky.emit("install_progress", "Configuring samba...")
+            if not self.settings.get("shares"):
+                self.settings["shares"] = [
+                    {"name": "home", "path": "/home/deck", "enabled": True}
+                ]
+                self._save_setting()
+            await self._write_smb_conf()
+            steps.append("conf_written")
+
+            await decky.emit("install_progress", "Configuring firewall...")
+
+            await self._run("firewall-cmd --zone=public --add-service=samba --permanent")
+            await self._run("firewall-cmd --zone=public --add-service=mdns --permanent")
+            await self._run("firewall-cmd --zone=public --add-port=3702/udp --permanent")
+            await self._run("firewall-cmd --reload")
+            steps.append("firewall_configured")
+
+            await decky.emit("install_progress", "Starting services...")
+            await self._run("systemctl enable smb")
+            await self._run("systemctl start smb")
+
+            await self._run("systemctl enable avahi-daemon")
+            await self._run("systemctl start avahi-daemon")
+            steps.append("services_started")
+
+            await decky.emit("install_progress", "Installation complete!")
+            return {"success": True, "steps": steps}
+
+        except Exception as e:
+            decky.logger.error(f"Install failed: {e}")
+            return {"success": False, "error": str(e)}
+        finally:
+            self._installing = False
+            if "readonly_disabled" in steps:
+                await self._run("steamos-readonly enable")
+
+    async def _write_smb_conf(self):
+        netbios = self.settings.get("netbios_name", "steamdeck")
+        shares = self.settings.get("shares", [])
+
+        lines = [
+            "[global]",
+            f" netbios name = {netbios}",
+            ""
+        ]
+
+        for share in shares:
+            if not share.get("enabled", True):
+                continue
+            lines.extend([
+                f"[{share['name']}]",
+                f"  comment = {share['name']} directory",
+                f"  path = {share['path']}",
+                "   browseable = yes",
+                "   read only = no",
+                "   create mask = 0777",
+                "   directory mask = 0777",
+                "   force user = deck",
+                "   force group = deck",
+                "",
+            ])
+        self._write_file("/etc/samba/smb.conf", "\n".join(lines))
 
     # helpers
 
