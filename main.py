@@ -39,16 +39,19 @@ class Plugin:
     async def _run(self, cmd: str) -> tuple[int, str, str]:
         process = await asyncio.create_subprocess_shell(
             cmd,
+            env=self._clean_env(),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
         assert process.returncode is not None
-        return process.returncode, stdout.decode(), stderr.decode()
+        return process.returncode, stdout.decode().strip(), stderr.decode().strip()
 
     async def get_smb_status(self) -> dict:
         # get ip
         rcode_ip, ip_out, _ = await self._run("ip route get 1 | awk '{print $7; exit}'")
+        decky.logger.info(
+            f"IP cmd: rcode={rcode_ip}, stdout='{ip_out}'")
         if rcode_ip == 0:
             ip = ip_out
         else:
@@ -80,6 +83,16 @@ class Plugin:
         }
 
     # helpers
+
+    @staticmethod
+    def _clean_env() -> dict:
+        """
+        clean LD_LIBRARY_PATH before run cmd, otherwise wrong realine will be loaded
+        """
+        env = os.environ.copy()
+        env.pop("LD_LIBRARY_PATH", None)
+        env.pop("LD_PRELOAD", None)
+        return env
 
     def _write_file(self, path: str, content: str):
         os.makedirs(os.path.dirname(path), exist_ok=True)
