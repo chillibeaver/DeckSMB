@@ -2,7 +2,6 @@ import {
   ButtonItem,
   PanelSection,
   PanelSectionRow,
-  Navigation,
   staticClasses
 } from "@decky/ui";
 import {
@@ -43,7 +42,7 @@ function Content() {
           layout="below"
           onClick={onClick}
         >
-          {result ?? "Add two numbers via Python"}
+          {result ?? "Add two random numbers via Python"}
         </ButtonItem>
       </PanelSectionRow>
       <PanelSectionRow>

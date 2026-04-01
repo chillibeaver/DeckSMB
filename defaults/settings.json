@@ -1,0 +1,10 @@
+{
+  "shares": [
+    {
+      "name": "home",
+      "path": "/home/deck",
+      "enabled": true
+    }
+  ],
+  "netbios_name": "steamdeck"
+}
