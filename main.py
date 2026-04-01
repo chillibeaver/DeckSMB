@@ -150,6 +150,9 @@ class Plugin:
             await decky.emit("install_progress", "Starting services...")
             await self._run("systemctl enable smb")
             await self._run("systemctl start smb")
+            if os.path.exists("/etc/systemd/system/wsdd.service"):
+                await self._run("systemctl enable wsdd")
+                await self._run("systemctl start wsdd")
 
             await self._run("systemctl enable avahi-daemon")
             await self._run("systemctl start avahi-daemon")
@@ -192,6 +195,28 @@ class Plugin:
                 "",
             ])
         self._write_file("/etc/samba/smb.conf", "\n".join(lines))
+
+    async def _install_wsdd(self):
+        netbios = self.settings.get("netbios_name", "steamdeck")
+        service = (
+            "[Unit]\n"
+            "Description=Web Services Dynamic Discovery host daemon\n"
+            "After=network-online.target smb.service\n"
+            "Wants=network-online.target\n"
+            "\n"
+            "[Service]\n"
+            "Type=simple\n"
+            f"ExecStart=/usr/bin/python3 {self.wsdd_path} --shortlog -n {netbios}\n"
+            "Restart=on-failure\n"
+            "RestartSec=5\n"
+            "\n"
+            "[Install]\n"
+            "WantedBy=multi-user.target\n"
+        )
+        self._write_file("/etc/systemd/system/wsdd.service", service)
+
+        await self._run("systemctl daumon-reload")
+        return True
 
     # helpers
 
