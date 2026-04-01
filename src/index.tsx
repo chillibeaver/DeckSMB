@@ -17,38 +17,39 @@ import { FaShip } from "react-icons/fa";
 
 // import logo from "../assets/logo.png";
 
-// This function calls the python function "add", which takes in two numbers and returns their sum (as a number)
-// Note the type annotations:
-//  the first one: [first: number, second: number] is for the arguments
-//  the second one: number is for the return value
-const add = callable<[first: number, second: number], number>("add");
+interface DiscoveryStatus {
+  nmb: boolean;
+  avahi: boolean;
+  wsdd: boolean;
+}
 
-// This function calls the python function "start_timer", which takes in no arguments and returns nothing.
-// It starts a (python) timer which eventually emits the event 'timer_event'
-const startTimer = callable<[], void>("start_timer");
+interface SambaStatus {
+  installed: boolean;
+  active: boolean;
+  ip: string;
+  netbios_name: string;
+  discovery: DiscoveryStatus;
+}
+const getSambaStatus = callable<[], SambaStatus>('get_smb_status');
 
 function Content() {
-  const [result, setResult] = useState<number | undefined>();
-
-  const onClick = async () => {
-    const result = await add(Math.random(), Math.random());
-    setResult(result);
-  };
 
   return (
     <PanelSection title="Panel Section">
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={onClick}
+          onClick={async () => {
+            const smbStatus = await getSambaStatus()
+            console.log(smbStatus)
+          }}
         >
-          {result ?? "Add two random numbers via Python"}
+          Check SMB Status
         </ButtonItem>
       </PanelSectionRow>
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => startTimer()}
         >
           {"Start Python timer"}
         </ButtonItem>

@@ -1,3 +1,4 @@
+from dis import disco
 import os
 from typing import Optional
 
@@ -44,6 +45,39 @@ class Plugin:
         stdout, stderr = await process.communicate()
         assert process.returncode is not None
         return process.returncode, stdout.decode(), stderr.decode()
+
+    async def get_smb_status(self) -> dict:
+        # get ip
+        rcode_ip, ip_out, _ = await self._run("ip route get 1 | awk '{print $7; exit}'")
+        if rcode_ip == 0:
+            ip = ip_out
+        else:
+            ip = ""
+
+        smb_active = False
+        installed = False
+        discovery = {}
+
+        rcode_ins, _, _ = await self._run("which smbd")
+        if rcode_ins == 0:
+            installed = True
+        if installed:
+            # check smb active
+            _, stdout, _ = await self._run("systemctl is-active smb")
+            smb_active = stdout == "active"
+            # check wsdd and avahi
+            _, out_wsdd, _ = await self._run("systemctl is-active wsdd")
+            discovery["wsdd"] = out_wsdd == "active"
+            _, out_avahi, _ = await self._run("systemctl is-active avahi-daemon")
+            discovery["avahi"] = out_avahi == "active"
+
+        return {
+            "installed": installed,
+            "active": smb_active,
+            "ip": ip,
+            "netbios_name": self.settings.get("netbios_name", "steamdeck"),
+            "discovery": discovery
+        }
 
     # helpers
 
