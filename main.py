@@ -47,6 +47,15 @@ class Plugin:
 
     # helpers
 
+    def _write_file(self, path: str, content: str):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write(content)
+
+    def _remove_file(self, path: str):
+        if os.path.exists(path):
+            os.remove(path)
+
     def _load_setting(self) -> dict:
         if os.path.exists(self.settings_path):
             with open(self.settings_path, "r") as f:
