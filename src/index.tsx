@@ -53,6 +53,7 @@ const listDirs = callable<[string], { success: boolean; path: string; dirs: stri
 const getShares = callable<[], Share[]>("get_shares");
 const addShare = callable<[string, string], Result>("add_share");
 const removeShare = callable<[string], Result>("remove_share");
+const toggleShare = callable<[string, boolean], Result>("toggle_share");
 const setSambaPassword = callable<[string], Result>("set_smb_password");
 
 const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
@@ -248,6 +249,11 @@ const ShareListPanel: FC<{ shares: Share[]; onRefresh: () => void }> = ({ shares
     onRefresh();
   };
 
+  const handleToggle = async (name: string, enabled: boolean) => {
+    await toggleShare(name, enabled);
+    onRefresh();
+  };
+
   if (shares.length === 0) {
     return (
       <PanelSection title="Shared Folders">
@@ -263,7 +269,12 @@ const ShareListPanel: FC<{ shares: Share[]; onRefresh: () => void }> = ({ shares
       {shares.map((share) => (
         <Fragment key={share.name}>
           <PanelSectionRow>
-            <Field label={share.name} description={share.path} />
+            <ToggleField
+              label={share.name}
+              description={share.path}
+              checked={share.enabled}
+              onChange={(val: boolean) => handleToggle(share.name, val)}
+            />
           </PanelSectionRow>
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={() => handleRemove(share.name)}>

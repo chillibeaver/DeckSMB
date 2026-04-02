@@ -298,6 +298,24 @@ class Plugin:
         decky.logger.info("smb restarted because of remove share")
         return {"success": True}
 
+    async def toggle_share(self, name: str, enabled: bool) -> dict:
+        shares = self.settings.get("shares", [])
+        found = False
+        for s in shares:
+            if s["name"] == name:
+                s["enabled"] = enabled
+                found = True
+                break
+
+        if not found:
+            return {"success": False, "error": f"Share '{name}' not found"}
+
+        self.settings["shares"] = shares
+        self._save_setting()
+        await self._write_smb_conf()
+        await self._run("systemctl reload-or-restart smb")
+        return {"success": True}
+
     # config write
 
     async def _remove_avahi_service(self):
