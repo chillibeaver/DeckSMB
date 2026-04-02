@@ -7,6 +7,7 @@ import {
 } from "@decky/ui";
 import {
   addEventListener,
+  removeEventListener,
   callable,
   definePlugin,
 } from "@decky/api";
@@ -34,6 +35,7 @@ interface Result {
 
 const getSambaStatus = callable<[], SambaStatus>("get_smb_status");
 const installSamba = callable<[], Result>("install_smb");
+const uninstallSamba = callable<[], Result>("uninstall_samba");
 
 const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   const [installing, setInstalling] = useState(false);
@@ -41,10 +43,10 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const unsub = addEventListener<[string]>("install_progress", (msg) => {
+    const listener = addEventListener<[string]>("install_progress", (msg) => {
       setProgress(msg);
     });
-    return () => { unsub; };
+    return () => { removeEventListener("install_progress", listener); };
   }, []);
 
   const handleInstall = async () => {
@@ -97,6 +99,7 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
 const Content: FC = () => {
   const [status, setStatus] = useState<SambaStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uninstalling, setUninstalling] = useState(false);
 
   const refresh = async () => {
     try {
@@ -122,17 +125,39 @@ const Content: FC = () => {
     );
   }
 
-  if (!status?.installed) {
+  if (!status?.installed && !uninstalling) {
     return <InstallPanel onInstalled={refresh} />;
   }
+
+  if (uninstalling) {
+    return (
+      <PanelSection title="Uninstalling Samba">
+        <PanelSectionRow>
+          <Field label="Status">Removing and cleaning...</Field>
+        </PanelSectionRow>
+      </PanelSection>
+    );
+  }
+
+  const handleUninstall = async () => {
+    setUninstalling(true);
+    await uninstallSamba();
+    setUninstalling(false);
+    await refresh();
+  };
 
   return (
     <Fragment>
       <PanelSection title="Samba Server">
         <PanelSectionRow>
           <Field label="SMB Service">
-            {status.active ? "Running" : "Stopped"}
+            {status!.active ? "Running" : "Stopped"}
           </Field>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={handleUninstall}>
+            Uninstall Samba
+          </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
     </Fragment>

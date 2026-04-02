@@ -172,6 +172,34 @@ class Plugin:
             if "readonly_disabled" in steps:
                 await self._run("steamos-readonly enable")
 
+    async def uninstall_samba(self) -> dict:
+        try:
+            for service in ["smb", "wsdd", "avahi-daemon", "avahi-daemon.socket"]:
+                await self._run(f"systemctl stop {service}")
+                await self._run(f"systemctl disable {service}")
+
+            rc, _, stderr = await self._run("steamos-readonly disable")
+            if rc != 0:
+                return {"success": False, "error": f"Failed to disable read only: {stderr}"}
+            try:
+                await self._run("rm -f /usr/lib/holo/pacmandb/db.lck /var/lib/pacman/db.lck")
+                await self._run("pacman -Rns --noconfirm samba")
+            finally:
+                await self._run("steamos-readonly enable")
+
+            self._remove_file("/etc/samba/smb.conf")
+            self._remove_file("/etc/avahi/services/smb.service")
+            self._remove_file("/etc/systemd/system/wsdd.service")
+
+            await self._run("systemctl daemon-reload")
+
+            return {"success": True}
+        except Exception as e:
+            decky.logger.error(f"Uninstall failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    # config write
+
     async def _write_smb_conf(self):
         netbios = self.settings.get("netbios_name", "steamdeck")
         shares = self.settings.get("shares", [])
