@@ -3,6 +3,7 @@ import {
   PanelSection,
   PanelSectionRow,
   ToggleField,
+  TextField,
   Field,
   Focusable,
   DialogButton,
@@ -17,7 +18,7 @@ import {
   definePlugin,
 } from "@decky/api";
 import { useState, useEffect, Fragment, FC } from "react";
-import { FaNetworkWired, FaTrash, FaPlus } from "react-icons/fa";
+import { FaNetworkWired, FaTrash, FaPlus, FaKey } from "react-icons/fa";
 
 interface DiscoveryStatus {
   avahi: boolean;
@@ -52,6 +53,7 @@ const listDirs = callable<[string], { success: boolean; path: string; dirs: stri
 const getShares = callable<[], Share[]>("get_shares");
 const addShare = callable<[string, string], Result>("add_share");
 const removeShare = callable<[string], Result>("remove_share");
+const setSambaPassword = callable<[string], Result>("set_smb_password");
 
 const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   const [installing, setInstalling] = useState(false);
@@ -111,6 +113,53 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   );
 };
 
+
+const TextInputModal: FC<{
+  closeModal?: () => void;
+  title: string;
+  label: string;
+  description?: string;
+  initialValue?: string;
+  bIsPassword?: boolean;
+  onSubmit: (value: string) => Promise<string | void>;
+}> = ({ closeModal, title, label, description, initialValue = "", bIsPassword = false, onSubmit }) => {
+  const [value, setValue] = useState(initialValue);
+  const [error, setError] = useState("");
+  const handleOK = async () => {
+    setError("");
+    const err = await onSubmit(value);
+    if (err) {
+      setError(err);
+    } else {
+      closeModal?.();
+    }
+  };
+  return (
+    <ModalRoot closeModal={closeModal}>
+      <div style={{ padding: "16px" }}>
+        <h3 style={{ marginBottom: "12px" }}>{title}</h3>
+        <TextField
+          label={label}
+          description={description}
+          bIsPassword={bIsPassword}
+          value={value}
+          onChange={(e: any) => setValue(e?.target?.value ?? "")}
+        />
+        {error && (
+          <div style={{ color: "#f44", marginTop: "8px", fontSize: "13px" }}>{error}</div>
+        )}
+        <Focusable style={{ marginTop: "16px" }}>
+          <DialogButton onClick={handleOK} style={{ marginBottom: "8px" }}>
+            OK
+          </DialogButton>
+          <DialogButton onClick={() => closeModal?.()}>
+            Cancel
+          </DialogButton>
+        </Focusable>
+      </div>
+    </ModalRoot>
+  );
+};
 
 const FolderBrowserModal: FC<{
   closeModal?: () => void;
@@ -240,13 +289,11 @@ const AddSharePanel: FC<{ onAdded: () => void }> = ({ onAdded }) => {
   };
 
   return (
-    <PanelSection title="Add Share">
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleBrowse}>
-          <FaPlus /> Browse Folders
+          <FaPlus /> Add Folders
         </ButtonItem>
       </PanelSectionRow>
-    </PanelSection>
   );
 };
 
@@ -320,15 +367,34 @@ const Content: FC = () => {
             }}
           />
         </PanelSectionRow>
+        <AddSharePanel onAdded={refresh} />
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleUninstall}>
-            Uninstall Samba
+          <ButtonItem layout="below" onClick={() => showModal(
+            <TextInputModal
+              title="Change SMB Password"
+              label="New Password"
+              bIsPassword={true}
+              onSubmit={async (val) => {
+                if (!val) return "Password cannot be empty";
+                const result = await setSambaPassword(val);
+                if (result.success) return;
+                return result.error || "Failed to set password";
+              }}
+            />
+          )}>
+            <FaKey /> Change Password
           </ButtonItem>
         </PanelSectionRow>
+        <style>{`.decksmb-danger .DialogButton { color: #f44 !important; }`}</style>
+        <div className="decksmb-danger">
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={handleUninstall}>
+              <FaTrash /> Uninstall Samba
+            </ButtonItem>
+          </PanelSectionRow>
+        </div>
       </PanelSection>
-
       <ShareListPanel shares={shares} onRefresh={refresh} />
-      <AddSharePanel onAdded={refresh} />
     </Fragment>
   );
 };

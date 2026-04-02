@@ -51,8 +51,6 @@ class Plugin:
     async def get_smb_status(self) -> dict:
         # get ip
         rcode_ip, ip_out, _ = await self._run("ip route get 1 | awk '{print $7; exit}'")
-        decky.logger.info(
-            f"IP cmd: rcode={rcode_ip}, stdout='{ip_out}'")
         if rcode_ip == 0:
             ip = ip_out
         else:
@@ -146,7 +144,7 @@ class Plugin:
             await self._run("firewall-cmd --reload")
             steps.append("firewall_configured")
 
-            await decky.emit("install_progress", "Configuring network discovery...")
+            await decky.emit("install_progress", "Setting up discovery...")
             await self._setup_discovery()
             steps.append("discovery_configured")
 
@@ -261,6 +259,28 @@ class Plugin:
         await self._run("systemctl reload-or-restart smb")
         decky.logger.info("smb restarted because of add share")
         return {"success": True}
+
+    async def set_smb_password(self, password: str) -> dict:
+        decky.logger.info(
+            f"set_smb_password called")
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "smbpasswd", "-a", "-s", "deck",
+                env=self._clean_env(),
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            input_data = f"{password}\n{password}\n".encode()
+            stdout, stderr = await process.communicate(input=input_data)
+            decky.logger.info(
+                f"smbpasswd result: rc={process.returncode}, stdout={stdout.decode().strip()}, stderr={stderr.decode().strip()}")
+            if process.returncode != 0:
+                return {"success": False, "error": stderr.decode().strip()}
+            return {"success": True}
+        except Exception as e:
+            decky.logger.error(f"Set password failed: {e}")
+            return {"success": False, "error": str(e)}
 
     async def remove_share(self, name: str) -> dict:
 
