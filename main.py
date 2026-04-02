@@ -111,7 +111,7 @@ class Plugin:
             if "ro=true" in readonly_out:
                 await self._run("btrfs property set / ro false")
                 await self._run("mount -o remount,rw /")
-            rc, stdout, stderr = await self._run("pacman -Sy --nonconfirm samba")
+            rc, stdout, stderr = await self._run("pacman -Sy --noconfirm samba")
             decky.logger.info(
                 f"pacman install samba: rc={rc} stderr={stderr[:200] if stderr else ''}")
             if rc != 0:
@@ -140,12 +140,15 @@ class Plugin:
             steps.append("conf_written")
 
             await decky.emit("install_progress", "Configuring firewall...")
-
             await self._run("firewall-cmd --zone=public --add-service=samba --permanent")
             await self._run("firewall-cmd --zone=public --add-service=mdns --permanent")
             await self._run("firewall-cmd --zone=public --add-port=3702/udp --permanent")
             await self._run("firewall-cmd --reload")
             steps.append("firewall_configured")
+
+            await decky.emit("install_progress", "Configuring network discovery...")
+            await self._setup_discovery()
+            steps.append("discovery_configured")
 
             await decky.emit("install_progress", "Starting services...")
             await self._run("systemctl enable smb")
@@ -215,8 +218,23 @@ class Plugin:
         )
         self._write_file("/etc/systemd/system/wsdd.service", service)
 
-        await self._run("systemctl daumon-reload")
+        await self._run("systemctl daemon-reload")
         return True
+
+    async def _write_avahi_service(self):
+
+        content = (
+            '<?xml version="1.0" standalone=\'no\'?>\n'
+            '<!DOCTYPE service-group SYSTEM "avahi-service.dtd">\n'
+            "<service-group>\n"
+            '  <name replace-wildcards="yes">%h</name>\n'
+            "  <service>\n"
+            "    <type>_smb._tcp</type>\n"
+            "    <port>445</port>\n"
+            "  </service>\n"
+            "</service-group>\n"
+        )
+        self._write_file("/etc/avahi/services/smb.service", content)
 
     # helpers
 
@@ -266,3 +284,8 @@ class Plugin:
         os.makedirs(os.path.dirname(self.settings_path), exist_ok=True)
         with open(self.settings_path, "w") as f:
             json.dump(self.settings, f, indent=2)
+
+    async def _setup_discovery(self):
+
+        await self._write_avahi_service()
+        await self._install_wsdd()

@@ -21,7 +21,7 @@
             "type": "shell",
             "group": "none",
             "detail": "Setup pnpm",
-            "command": "which pnpm && pnpm i",
+            "command": "source ~/.nvm/nvm.sh && which pnpm && pnpm i",
             "problemMatcher": []
         },
         //Preliminary "All-in-one" setup task
@@ -126,7 +126,7 @@
             "type": "shell",
             "group": "build",
             "detail": "Update @decky/ui aka DFL",
-            "command": "pnpm update @decky/ui --latest",
+            "command": "source ~/.nvm/nvm.sh && pnpm update @decky/ui --latest",
             "problemMatcher": []
         },
         //Used chmod plugins folder to allow copy-over of files
