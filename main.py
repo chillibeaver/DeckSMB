@@ -162,6 +162,7 @@ class Plugin:
             steps.append("services_started")
 
             await decky.emit("install_progress", "Installation complete!")
+            decky.logger.info("smb install complete")
             return {"success": True, "steps": steps}
 
         except Exception as e:
@@ -223,6 +224,58 @@ class Plugin:
             for svc in ["avahi-daemon", "avahi-daemon.socket"]:
                 await self._run(f"systemctl stop {svc}")
                 await self._run(f"systemctl disable {svc}")
+        return {"success": True}
+
+    async def list_dirs(self, path: str) -> dict:
+        try:
+            folder_list = []
+            for folder in os.scandir(path):
+                if not folder.is_dir():
+                    continue
+                if folder.name.startswith("."):
+                    continue
+                folder_list.append(folder.name)
+            folder_list.sort()
+            return {"success": True, "path": path, "dirs": folder_list}
+
+        except PermissionError:
+            return {"success": False, "error": "Permission denied"}
+        except FileNotFoundError:
+            return {"success": False, "error": "Path not found"}
+
+    async def get_shares(self) -> list:
+        return self.settings.get("shares", [])
+
+    async def add_share(self, name: str, path: str) -> dict:
+        path = os.path.realpath(path)
+
+        shares = self.settings.get("shares", [])
+        for s in shares:
+            if s["name"] == name:
+                return {"success": False, "error": f"Share '{name}' already exists"}
+
+        shares.append({"name": name, "path": path, "enabled": True})
+        self.settings["shares"] = shares
+        self._save_setting()
+        await self._write_smb_conf()
+        await self._run("systemctl reload-or-restart smb")
+        decky.logger.info("smb restarted because of add share")
+        return {"success": True}
+
+    async def remove_share(self, name: str) -> dict:
+
+        shares = self.settings.get("shares", [])
+        for s in shares:
+            if s["name"] == name:
+                shares.remove(s)
+                decky.logger.info("share removed")
+                break
+
+        self.settings["shares"] = shares
+        self._save_setting()
+        await self._write_smb_conf()
+        await self._run("systemctl reload-or-restart smb")
+        decky.logger.info("smb restarted because of remove share")
         return {"success": True}
 
     # config write
