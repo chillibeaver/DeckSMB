@@ -2,6 +2,7 @@ import {
   ButtonItem,
   PanelSection,
   PanelSectionRow,
+  ToggleField,
   Field,
   staticClasses,
 } from "@decky/ui";
@@ -36,6 +37,7 @@ interface Result {
 const getSambaStatus = callable<[], SambaStatus>("get_smb_status");
 const installSamba = callable<[], Result>("install_smb");
 const uninstallSamba = callable<[], Result>("uninstall_samba");
+const toggleSamba = callable<[boolean], Result>("toggle_smb");
 
 const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   const [installing, setInstalling] = useState(false);
@@ -100,6 +102,7 @@ const Content: FC = () => {
   const [status, setStatus] = useState<SambaStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [uninstalling, setUninstalling] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   const refresh = async () => {
     try {
@@ -150,9 +153,18 @@ const Content: FC = () => {
     <Fragment>
       <PanelSection title="Samba Server">
         <PanelSectionRow>
-          <Field label="SMB Service">
-            {status!.active ? "Running" : "Stopped"}
-          </Field>
+          <ToggleField
+            label="SMB Service"
+            description={toggling ? (status!.active ? "Stopping..." : "Starting...") : (status!.active ? "Running" : "Stopped")}
+            checked={status!.active}
+            disabled={toggling}
+            onChange={async (val: boolean) => {
+              setToggling(true);
+              await toggleSamba(val);
+              await refresh();
+              setToggling(false);
+            }}
+          />
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleUninstall}>

@@ -198,7 +198,37 @@ class Plugin:
             decky.logger.error(f"Uninstall failed: {e}")
             return {"success": False, "error": str(e)}
 
+    async def toggle_smb(self, enable: bool) -> dict:
+        if enable:
+            action = "start"
+            boot_action = "enable"
+        else:
+            action = "stop"
+            boot_action = "disable"
+
+        rc, _, stderr = await self._run(f"systemctl {action} smb")
+        if rc != 0:
+            return {"success": False, "error": stderr}
+
+        await self._run(f"systemctl {boot_action} smb")
+        await self._run(f"systemctl {action} wsdd")
+        await self._run(f"systemctl {boot_action} wsdd")
+
+        if enable:
+            await self._write_avahi_service()
+            await self._run("systemctl enable avahi-daemon")
+            await self._run("systemctl start avahi-daemon")
+        else:
+            await self._remove_avahi_service()
+            for svc in ["avahi-daemon", "avahi-daemon.socket"]:
+                await self._run(f"systemctl stop {svc}")
+                await self._run(f"systemctl disable {svc}")
+        return {"success": True}
+
     # config write
+
+    async def _remove_avahi_service(self):
+        self._remove_file("/etc/avahi/services/smb.service")
 
     async def _write_smb_conf(self):
         netbios = self.settings.get("netbios_name", "steamdeck")
