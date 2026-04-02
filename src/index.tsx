@@ -114,11 +114,12 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
 
 const FolderBrowserModal: FC<{
   closeModal?: () => void;
-  onSelect: (path: string) => void;
+  onSelect: (path: string) => Promise<Result>;
 }> = ({ closeModal, onSelect }) => {
   const [currentPath, setCurrentPath] = useState("/home/deck");
   const [dirs, setDirs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const browse = async (path: string) => {
     setLoading(true);
@@ -167,8 +168,19 @@ const FolderBrowserModal: FC<{
             </Focusable>
           )}
         </div>
+        {error && (
+          <div style={{ color: "#f44", fontSize: "13px", marginBottom: "8px" }}>{error}</div>
+        )}
         <Focusable>
-          <DialogButton onClick={() => { onSelect(currentPath); closeModal?.(); }} style={{ marginBottom: "8px" }}>
+          <DialogButton onClick={async () => {
+            setError("");
+            const result = await onSelect(currentPath);
+            if (result.success) {
+              closeModal?.();
+            } else {
+              setError("Share already exists");
+            }
+          }} style={{ marginBottom: "8px" }}>
             Share This Folder
           </DialogButton>
           <DialogButton onClick={() => closeModal?.()}>
@@ -216,10 +228,11 @@ const ShareListPanel: FC<{ shares: Share[]; onRefresh: () => void }> = ({ shares
 };
 
 const AddSharePanel: FC<{ onAdded: () => void }> = ({ onAdded }) => {
-  const doAddShare = async (path: string) => {
+  const doAddShare = async (path: string): Promise<Result> => {
     const name = path.replace(/\/+$/, "").split("/").pop() || path;
-    await addShare(name, path);
-    onAdded();
+    const result = await addShare(name, path);
+    if (result.success) onAdded();
+    return result;
   };
 
   const handleBrowse = () => {
