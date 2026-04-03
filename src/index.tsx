@@ -19,6 +19,7 @@ import {
 } from "@decky/api";
 import { useState, useEffect, Fragment, FC } from "react";
 import { FaNetworkWired, FaTrash, FaPlus, FaKey } from "react-icons/fa";
+import { t, loadTranslations } from "./i18n/translations";
 
 interface DiscoveryStatus {
   avahi: boolean;
@@ -77,7 +78,7 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
       if (result.success) {
         onInstalled();
       } else {
-        setError(result.error || "Installation failed");
+        setError(result.error || t("install.installFailed"));
       }
     } catch (e) {
       setError(String(e));
@@ -86,10 +87,10 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   };
 
   return (
-    <PanelSection title="Install Samba">
+    <PanelSection title={t("install.title")}>
       <PanelSectionRow>
-        <Field label="Status">
-          Samba is not installed
+        <Field label={t("install.status")}>
+          {t("install.notInstalled")}
         </Field>
       </PanelSectionRow>
       <PanelSectionRow>
@@ -98,17 +99,17 @@ const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
           onClick={handleInstall}
           disabled={installing}
         >
-          {installing ? progress || "Installing..." : "Install Samba"}
+          {installing ? progress || t("install.installing") : t("install.installButton")}
         </ButtonItem>
       </PanelSectionRow>
       {error && (
         <PanelSectionRow>
-          <Field label="Error">{error}</Field>
+          <Field label={t("install.error")}>{error}</Field>
         </PanelSectionRow>
       )}
       <PanelSectionRow>
         <div style={{ fontSize: "11px", opacity: 0.8, padding: "0 16px", marginTop: "8px" }}>
-          Note: SteamOS updates will remove Samba due to its immutable filesystem. You will need to reinstall after each system update. Your shares and password will be preserved.
+          {t("install.note")}
         </div>
       </PanelSectionRow>
     </PanelSection>
@@ -152,10 +153,10 @@ const TextInputModal: FC<{
         )}
         <Focusable style={{ marginTop: "16px" }}>
           <DialogButton onClick={handleOK} style={{ marginBottom: "8px" }}>
-            OK
+            {t("modal.ok")}
           </DialogButton>
           <DialogButton onClick={() => closeModal?.()}>
-            Cancel
+            {t("modal.cancel")}
           </DialogButton>
         </Focusable>
       </div>
@@ -194,13 +195,13 @@ const FolderBrowserModal: FC<{
   return (
     <ModalRoot closeModal={closeModal}>
       <div style={{ padding: "16px", maxHeight: "400px", display: "flex", flexDirection: "column" }}>
-        <h3 style={{ marginBottom: "8px" }}>Select Folder</h3>
+        <h3 style={{ marginBottom: "8px" }}>{t("folderBrowser.title")}</h3>
         <div style={{ marginBottom: "8px", fontSize: "12px", opacity: 0.7, wordBreak: "break-all" }}>
           {currentPath}
         </div>
         <div style={{ flex: 1, overflowY: "auto", marginBottom: "12px" }}>
           {loading ? (
-            <div>Loading...</div>
+            <div>{t("folderBrowser.loading")}</div>
           ) : (
             <Focusable>
               <DialogButton onClick={goUp} style={{ marginBottom: "4px", padding: "8px" }}>
@@ -215,7 +216,7 @@ const FolderBrowserModal: FC<{
                   {dir}
                 </DialogButton>
               ))}
-              {dirs.length === 0 && <div style={{ opacity: 0.5, padding: "8px" }}>No subfolders</div>}
+              {dirs.length === 0 && <div style={{ opacity: 0.5, padding: "8px" }}>{t("folderBrowser.noSubfolders")}</div>}
             </Focusable>
           )}
         </div>
@@ -229,13 +230,13 @@ const FolderBrowserModal: FC<{
             if (result.success) {
               closeModal?.();
             } else {
-              setError("Share already exists");
+              setError(t("folderBrowser.shareAlreadyExists"));
             }
           }} style={{ marginBottom: "8px" }}>
-            Share This Folder
+            {t("folderBrowser.shareThisFolder")}
           </DialogButton>
           <DialogButton onClick={() => closeModal?.()}>
-            Cancel
+            {t("modal.cancel")}
           </DialogButton>
         </Focusable>
       </div>
@@ -257,16 +258,16 @@ const ShareListPanel: FC<{ shares: Share[]; onRefresh: () => void }> = ({ shares
 
   if (shares.length === 0) {
     return (
-      <PanelSection title="Shared Folders">
+      <PanelSection title={t("shares.title")}>
         <PanelSectionRow>
-          <Field label="No shares configured">Add a share below</Field>
+          <Field label={t("shares.noShares")}>{}</Field>
         </PanelSectionRow>
       </PanelSection>
     );
   }
 
   return (
-    <PanelSection title="Shared Folders">
+    <PanelSection title={t("shares.title")}>
       {shares.map((share) => (
         <Fragment key={share.name}>
           <PanelSectionRow>
@@ -279,7 +280,7 @@ const ShareListPanel: FC<{ shares: Share[]; onRefresh: () => void }> = ({ shares
           </PanelSectionRow>
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={() => handleRemove(share.name)}>
-              <FaTrash /> Remove "{share.name}"
+              <FaTrash /> {t("shares.remove", { name: share.name })}
             </ButtonItem>
           </PanelSectionRow>
         </Fragment>
@@ -303,7 +304,7 @@ const AddSharePanel: FC<{ onAdded: () => void }> = ({ onAdded }) => {
   return (
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleBrowse}>
-          <FaPlus /> Add Folders
+          <FaPlus /> {t("server.addFolders")}
         </ButtonItem>
       </PanelSectionRow>
   );
@@ -334,9 +335,9 @@ const Content: FC = () => {
 
   if (loading) {
     return (
-      <PanelSection title="Samba Server">
+      <PanelSection title={t("server.title")}>
         <PanelSectionRow>
-          <Field label="Loading...">Please wait</Field>
+          <Field label={t("server.loading")}>{t("server.pleaseWait")}</Field>
         </PanelSectionRow>
       </PanelSection>
     );
@@ -348,9 +349,9 @@ const Content: FC = () => {
 
   if (uninstalling) {
     return (
-      <PanelSection title="Uninstalling Samba">
+      <PanelSection title={t("uninstall.title")}>
         <PanelSectionRow>
-          <Field label="Status">Removing and cleaning...</Field>
+          <Field label={t("uninstall.status")}>{t("uninstall.removing")}</Field>
         </PanelSectionRow>
       </PanelSection>
     );
@@ -365,11 +366,11 @@ const Content: FC = () => {
 
   return (
     <Fragment>
-      <PanelSection title="Samba Server">
+      <PanelSection title={t("server.title")}>
         <PanelSectionRow>
           <ToggleField
-            label="SMB Service"
-            description={toggling ? (status!.active ? "Stopping..." : "Starting...") : (status!.active ? "Running" : "Stopped")}
+            label={t("server.smbService")}
+            description={toggling ? (status!.active ? t("server.stopping") : t("server.starting")) : (status!.active ? t("server.running") : t("server.stopped"))}
             checked={status!.active}
             disabled={toggling}
             onChange={async (val: boolean) => {
@@ -384,25 +385,25 @@ const Content: FC = () => {
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => showModal(
             <TextInputModal
-              title="Change SMB Password"
-              label="New Password"
+              title={t("server.changePasswordTitle")}
+              label={t("server.newPassword")}
               bIsPassword={true}
               onSubmit={async (val) => {
-                if (!val) return "Password cannot be empty";
+                if (!val) return t("server.passwordEmpty");
                 const result = await setSambaPassword(val);
                 if (result.success) return;
-                return result.error || "Failed to set password";
+                return result.error || t("server.passwordFailed");
               }}
             />
           )}>
-            <FaKey /> Change Password
+            <FaKey /> {t("server.changePassword")}
           </ButtonItem>
         </PanelSectionRow>
         <style>{`.decksmb-danger .DialogButton { color: #f44 !important; }`}</style>
         <div className="decksmb-danger">
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={handleUninstall}>
-              <FaTrash /> Uninstall Samba
+              <FaTrash /> {t("server.uninstallSamba")}
             </ButtonItem>
           </PanelSectionRow>
         </div>
@@ -412,10 +413,13 @@ const Content: FC = () => {
   );
 };
 
-export default definePlugin(() => ({
+export default definePlugin(() => {
+  loadTranslations();
+  return {
   name: "DeckSMB",
   titleView: <div className={staticClasses.Title}>DeckSMB</div>,
   content: <Content />,
   icon: <FaNetworkWired />,
   onDismount() {},
-}));
+  };
+});

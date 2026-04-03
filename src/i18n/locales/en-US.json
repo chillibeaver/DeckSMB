@@ -1,0 +1,50 @@
+{
+  "install": {
+    "title": "Install Samba",
+    "status": "Status",
+    "notInstalled": "Samba is not installed",
+    "installing": "Installing...",
+    "installButton": "Install Samba",
+    "error": "Error",
+    "installFailed": "Installation failed",
+    "note": "Note: SteamOS updates will remove Samba due to its immutable filesystem. You will need to reinstall after each system update. Your shares and password will be preserved."
+  },
+  "modal": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
+  "folderBrowser": {
+    "title": "Select Folder",
+    "loading": "Loading...",
+    "noSubfolders": "No subfolders",
+    "shareThisFolder": "Share This Folder",
+    "shareAlreadyExists": "Share already exists"
+  },
+  "shares": {
+    "title": "Shared Folders",
+    "noShares": "No shares configured",
+    "remove": "Remove \"{{name}}\""
+  },
+  "server": {
+    "title": "Samba Server",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait",
+    "smbService": "SMB Service",
+    "stopping": "Stopping...",
+    "starting": "Starting...",
+    "running": "Running",
+    "stopped": "Stopped",
+    "addFolders": "Add Folders",
+    "changePassword": "Change Password",
+    "changePasswordTitle": "Change SMB Password",
+    "newPassword": "New Password",
+    "passwordEmpty": "Password cannot be empty",
+    "passwordFailed": "Failed to set password",
+    "uninstallSamba": "Uninstall Samba"
+  },
+  "uninstall": {
+    "title": "Uninstalling Samba",
+    "status": "Status",
+    "removing": "Removing and cleaning..."
+  }
+}
