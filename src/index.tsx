@@ -55,6 +55,7 @@ const addShare = callable<[string, string], Result>("add_share");
 const removeShare = callable<[string], Result>("remove_share");
 const toggleShare = callable<[string, boolean], Result>("toggle_share");
 const setSambaPassword = callable<[string], Result>("set_smb_password");
+const checkAndRepair = callable<[], Result>("check_and_repair");
 
 const InstallPanel: FC<{ onInstalled: () => void }> = ({ onInstalled }) => {
   const [installing, setInstalling] = useState(false);
@@ -328,6 +329,7 @@ const Content: FC = () => {
 
   useEffect(() => {
     refresh();
+    checkAndRepair();
   }, []);
 
   if (loading) {

@@ -308,6 +308,7 @@ class Plugin:
                 break
 
         if not found:
+            decky.logger.error(f"Share '{name}' not found")
             return {"success": False, "error": f"Share '{name}' not found"}
 
         self.settings["shares"] = shares
@@ -315,6 +316,41 @@ class Plugin:
         await self._write_smb_conf()
         await self._run("systemctl reload-or-restart smb")
         return {"success": True}
+
+    async def _repair_discovery(self):
+        await self._write_avahi_service()
+
+        if os.path.exists(self.wsdd_path) and not os.path.exists("/etc/systemd/system/wsdd.service"):
+            await self._install_wsdd()
+
+        _, smb_state, _ = await self._run("systemctl is-active smb")
+        if smb_state != "active":
+            return
+
+        await self._run("systemctl enable avahi-daemon")
+        _, out, _ = await self._run("systemctl is-active avahi-daemon")
+        if out != "active":
+            await self._run("systemctl start avahi-daemon")
+        if os.path.exists("/etc/systemd/system/wsdd.service"):
+            await self._run("systemctl enable wsdd")
+            _, out, _ = await self._run("systemctl is-active wsdd")
+            if out != "active":
+                await self._run("systemctl reset-failed wsdd")
+                await self._run("systemctl start wsdd")
+
+    async def _stop_discovery(self):
+        await self._run("systemctl stop wsdd")
+        await self._run("systemctl disable wsdd")
+        self._remove_file("/etc/avahi/services/smb.service")
+
+    async def check_and_repair(self) -> dict:
+        rc, _, _ = await self._run("which smbd")
+        if rc == 0:
+            await self._write_smb_conf()
+            await self._repair_discovery()
+            return {"repaired": True}
+        await self._stop_discovery()
+        return {"repaired": False}
 
     # config write
 
