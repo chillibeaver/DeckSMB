@@ -1,7 +1,7 @@
 {
   "name": "deck-smb",
-  "version": "0.0.1",
-  "description": "A template to quickly create decky plugins from scratch, based on TypeScript and webpack",
+  "version": "1.1.0",
+  "description": "A Decky plugin to set up a Samba/SMB server on Steam Deck for file sharing — all from Game Mode.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",

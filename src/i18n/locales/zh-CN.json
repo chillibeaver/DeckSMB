@@ -1,0 +1,50 @@
+{
+  "install": {
+    "title": "安装 Samba",
+    "status": "状态",
+    "notInstalled": "Samba 尚未安装",
+    "installing": "安装中...",
+    "installButton": "安装 Samba",
+    "error": "错误",
+    "installFailed": "安装失败",
+    "note": "注意：由于 SteamOS 采用不可变文件系统，系统更新后会移除 Samba。每次系统更新后需要重新安装。您的共享文件夹和密码将会保留。"
+  },
+  "modal": {
+    "ok": "确定",
+    "cancel": "取消"
+  },
+  "folderBrowser": {
+    "title": "选择文件夹",
+    "loading": "加载中...",
+    "noSubfolders": "没有子文件夹",
+    "shareThisFolder": "共享此文件夹",
+    "shareAlreadyExists": "共享已存在"
+  },
+  "shares": {
+    "title": "共享文件夹",
+    "noShares": "未配置共享",
+    "remove": "移除 \"{{name}}\""
+  },
+  "server": {
+    "title": "Samba 服务器",
+    "loading": "加载中...",
+    "pleaseWait": "请稍候",
+    "smbService": "SMB 服务",
+    "stopping": "停止中...",
+    "starting": "启动中...",
+    "running": "运行中",
+    "stopped": "已停止",
+    "addFolders": "添加文件夹",
+    "changePassword": "更改密码",
+    "changePasswordTitle": "更改 SMB 密码",
+    "newPassword": "新密码",
+    "passwordEmpty": "密码不能为空",
+    "passwordFailed": "密码设置失败",
+    "uninstallSamba": "卸载 Samba"
+  },
+  "uninstall": {
+    "title": "正在卸载 Samba",
+    "status": "状态",
+    "removing": "正在移除和清理..."
+  }
+}
