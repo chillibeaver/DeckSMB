@@ -1,4 +1,3 @@
-from dis import disco
 import os
 from typing import Optional
 
@@ -19,10 +18,17 @@ class Plugin:
     async def _main(self):
         self.settings_path = os.path.join(
             decky.DECKY_PLUGIN_SETTINGS_DIR, "settings.json")
-        self.settings = self._load_setting()
         self.wsdd_path = os.path.join(
             decky.DECKY_PLUGIN_DIR, "py_modules", "wsdd.py")
         self._installing = False
+        try:
+            self.settings = self._load_setting()
+        except Exception as e:
+            decky.logger.error(f"Failed to load settings: {e}")
+            self.settings = {"shares": [
+                {"name": "home", "path": "/home/deck", "enabled": True}
+            ], "netbios_name": "steamdeck"}
+            self._save_setting()
         decky.logger.info("main loaded")
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
@@ -117,7 +123,7 @@ class Plugin:
             steps.append("samba_installed")
 
             # default password
-            await decky.emit("install_progress", "Setting defualt password...")
+            await decky.emit("install_progress", "Setting default password...")
             process = await asyncio.create_subprocess_exec(
                 "smbpasswd", "-a", "-s", "deck",
                 env=self._clean_env(),
@@ -442,23 +448,22 @@ class Plugin:
         if os.path.exists(path):
             os.remove(path)
 
+    def _default_settings(self) -> dict:
+        return {"shares": [
+            {"name": "home", "path": "/home/deck", "enabled": True}
+        ], "netbios_name": "steamdeck"}
+
     def _load_setting(self) -> dict:
-        if os.path.exists(self.settings_path):
-            with open(self.settings_path, "r") as f:
-                return json.load(f)
-        defaults_path = os.path.join(decky.DECKY_PLUGIN_DIR, "settings.json")
-        if os.path.exists(defaults_path):
-            with open(defaults_path, "r") as f:
-                return json.load(f)
+        for path in [self.settings_path, os.path.join(decky.DECKY_PLUGIN_DIR, "settings.json")]:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+                raise ValueError(f"Invalid settings format in {path}")
 
         decky.logger.warning("No settings found, writing new settings")
-        settings = {"shares": [
-            {
-                "name": "home",
-                "path": "/home/deck",
-                "enabled": True
-            }
-        ], "netbios_name": "steamdeck"}
+        settings = self._default_settings()
         self._save_setting(settings)
         return settings
 

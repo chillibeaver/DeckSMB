@@ -330,7 +330,7 @@ const Content: FC = () => {
 
   useEffect(() => {
     refresh();
-    checkAndRepair();
+    checkAndRepair().catch((e) => console.error("check_and_repair failed:", e));
   }, []);
 
   if (loading) {
